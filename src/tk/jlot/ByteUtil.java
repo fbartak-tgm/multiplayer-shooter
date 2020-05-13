@@ -21,12 +21,11 @@ public class ByteUtil {
     }
     static long readLongFromByteArray(byte[] b, int start)
     {
-        System.out.println("Reading long!");
         long val = 0;
         for(int i = 0; i < 8; i++)
         {
             int currentByte = (b[start++]&0xFF);
-            System.out.println(currentByte);
+            //System.out.println(currentByte);
             val<<=8;
             val+=currentByte;
         }
