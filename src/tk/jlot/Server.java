@@ -62,14 +62,13 @@ public class Server implements Runnable {
                 for (ClientHandler clientHandler : clientHandlers) {
                     if (clientHandler != broadcast.sourcePlayer)
                     {
-                        //System.out.println("Broadcast!");
                         clientHandler.sendData(broadcast.data);
                     }
                 }
             }
             broadcasts.clear();
             try {
-                Thread.sleep(200);
+                Thread.sleep(20);
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 break;
