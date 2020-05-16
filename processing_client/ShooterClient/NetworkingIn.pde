@@ -123,3 +123,24 @@ public void receiveDamage() throws IOException {
      toDamage.hp -= damage;
   }
 }
+public void receiveSetHealth() throws IOException {
+  int len = inStream.read();
+  byte[] pack = new byte[len];
+  int l = inStream.read(pack);
+  byte health = pack[0];
+  long id = readLongFromByteArray(pack,1);
+  Player toDamage = null;
+  for(Player player : players)
+  {
+    if(player.id == id)
+    {
+       toDamage = player;
+       break;
+    }
+  }
+  if(toDamage != null)
+  {
+     println("Set health for: " + toDamage.id);
+     toDamage.hp = health;
+  }
+}

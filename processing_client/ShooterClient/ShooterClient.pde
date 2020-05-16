@@ -3,6 +3,8 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+String host = "jlot.tk";
+int port = 13821;
 ConcurrentLinkedQueue<Player> players = new ConcurrentLinkedQueue<Player>();
 ConcurrentLinkedQueue<Bullet> localBullets = new ConcurrentLinkedQueue<Bullet>();
 ConcurrentLinkedQueue<Bullet> allBullets = new ConcurrentLinkedQueue<Bullet>();
@@ -96,22 +98,25 @@ void updatePlayer()
 }
 
 
-
+int regularCooldown = 5;
+int shotgunCooldown = 20;
+long fireAgain = 0;
 void setup()
 {
   size(800, 800);
   frameRate(40);
+  fireAgain = -regularCooldown;
   localPlayer = new Player(new PVector(30, 30), new PVector(0,0), (byte)20,System.currentTimeMillis());
   randomSeed(localPlayer.id);
   addPlayer(localPlayer);
   try {
-    s = new Socket("localhost", 13821);
+    s = new Socket(host, port);
     outStream = s.getOutputStream();
     inStream = s.getInputStream();
     syncer = new Syncer(inStream);
     t = new Thread(syncer);
     t.start();
-    initPlayer(localPlayer.id);
+    sendPlayerUpdate();
   } 
   catch (IOException e) {
     println("Verbindungsfehler");
@@ -126,21 +131,44 @@ void draw()
   if(localPlayer.hp <= 0)
   {
      localPlayer.pos = new PVector(0,0);
-     initPlayer(localPlayer.id);
-     damagePlayer(localPlayer,(byte)(-localPlayer.hp-100));
+     sendPlayerUpdate();
+     setPlayerHealth(localPlayer,(byte)(100));
+     println("Player health < 0");
   }
   rectMode(CENTER);  
   if(!closed)
   {
     if(mousePressed)
     {
-      Bullet b = new Bullet(
-                      new PVector(localPlayer.pos.x,localPlayer.pos.y),
-                      new PVector(mouseX - width/2, mouseY - height/2).normalize().mult(10),
-                      (byte)5,(long)random(0,localPlayer.id),frameCount+bulletTTL);
-      sendCreateNewBullet(b);
-      localBullets.add(b);
-      allBullets.add(b);
+      if(frameCount > fireAgain)
+      {
+        if(mouseButton == LEFT)
+        {
+          fireAgain = frameCount+regularCooldown;
+          Bullet b = new Bullet(
+                          new PVector(localPlayer.pos.x,localPlayer.pos.y),
+                          new PVector(mouseX - width/2, mouseY - height/2).normalize().mult(10),
+                          (byte)5,(long)random(0,localPlayer.id),frameCount+bulletTTL);
+          sendCreateNewBullet(b);
+          localBullets.add(b);
+          allBullets.add(b);
+        }
+        else
+        {
+          fireAgain = frameCount+shotgunCooldown;
+          
+           for(int i = 0; i < 5; i++)
+           {
+               Bullet b = new Bullet(
+                          new PVector(localPlayer.pos.x,localPlayer.pos.y),
+                          new PVector(mouseX - width/2+random(-40,40), mouseY - height/2+random(-40,40)).normalize().mult(10),
+                          (byte)5,(long)random(0,localPlayer.id),frameCount+(int)(bulletTTL*random(0.75f,2f)));
+              sendCreateNewBullet(b);
+              localBullets.add(b);
+              allBullets.add(b);
+           }
+        }
+      }
     }
     updatePlayer();
     background(255);
@@ -206,14 +234,14 @@ void draw()
 boolean closed = false;
 void exit()
 {
-  closed = true;
-  sendPlayerLogout();
-  syncer.run = false;
   try
   {
-  s.close();
+    closed = true;
+    sendPlayerLogout();
+    syncer.run = false;
+    s.close();
   }
-  catch(IOException ioe)
+  catch(Exception ioe)
   {
     println("Failed to close socket"); 
   }

@@ -4,4 +4,4 @@ byte PLAYER = 0b01000000, //64
      CREATE = 0b00001000, // 8
      DESTROY= 0b00000100, // 4
      UPDATE = 0b00000010, // 2
-     FIX_ISS= 0b00000001; // 1
+     SET    = 0b00000001; // 1

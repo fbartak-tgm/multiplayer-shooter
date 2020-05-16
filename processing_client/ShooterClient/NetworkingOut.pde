@@ -8,13 +8,19 @@ void initPlayer(long idToUse)
     long y = (long) localPlayer.pos.y;
     byte[] pack = new byte[s];
     pack[0] = (byte)(PLAYER | CREATE);
-    pack[1] = (byte)(s-1);
+    pack[1] = (byte)(s-2);
     
     pack[2] = localPlayer.size;
     pushLongIntoByteArray(x, pack, 3);
     pushLongIntoByteArray(y, pack, 11);
     pushLongIntoByteArray(idToUse, pack, 19);
     outStream.write(pack);
+    println("INIT PLAYER packet: \n-------------");
+    for(byte b : pack)
+    {
+       println((b&0xFF)); 
+    }
+    println("-------------");
   }
   catch(Exception e)
   {  
@@ -38,6 +44,12 @@ void sendPlayerUpdate()
     pushLongIntoByteArray(localPlayer.id, pack, 5);
     outStream.write(pack);
     initPlayer(localPlayer.id);
+     println("UPDATE PLAYER packet: \n-------------");
+    for(byte b : pack)
+    {
+       println((b&0xFF)); 
+    }
+    println("-------------");
   }
   catch(Exception e)
   {  
@@ -89,7 +101,7 @@ void sendRemoveBullet(Bullet b)
     byte s = 10;
     byte[] pack = new byte[s];
     pack[0] = (byte)(BULLET | DESTROY);
-    pack[1] = 8;
+    pack[1] = (byte)(s-2);
     
     pushLongIntoByteArray(b.id,pack,2);
     outStream.write(pack);
@@ -108,13 +120,43 @@ void damagePlayer(Player p,byte amount)
     byte s = 11;
     byte[] pack = new byte[s];
     pack[0] = (byte)(PLAYER | DAMAGE);
-    pack[1] = 9;
+    pack[1] = (byte)(s-2);
     pack[2] = amount;
     pushLongIntoByteArray(p.id,pack,3);
+    println("Damage packet: \n-------------");
+    for(byte b : pack)
+    {
+       println((b&0xFF)); 
+    }
+    println("-------------");
     outStream.write(pack);
   }
   catch(Exception e)
   {  
+    println(e);
+  }
+}
+void setPlayerHealth(Player p,byte amount)
+{
+  p.hp = amount;
+  println("SETTING HEALTH!!!!");
+  try {
+    byte s = 11;
+    byte[] pack = new byte[s];
+    pack[0] = (byte)(PLAYER | SET);
+    pack[1] = (byte)(s-2);
+    pack[2] = (byte)(amount);
+    pushLongIntoByteArray(p.id,pack,3);
+    outStream.write(pack);
+     println("SET HEALTH packet: \n-------------");
+    for(byte b : pack)
+    {
+       println((b&0xFF)); 
+    }
+    println("-------------");
+  }
+  catch(Exception e)
+  {
     println(e);
   }
 }

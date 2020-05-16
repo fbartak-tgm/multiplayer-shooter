@@ -39,6 +39,11 @@ public class Syncer implements Runnable
                   receiveRemovePlayer();
                   continue;
               }
+               if((in&SET)!=0)
+              {
+                  receiveSetHealth();
+                  continue;
+              }
           }
           if((in&BULLET)!=0)
           {

@@ -1,0 +1,3 @@
+cd application.windows64
+ShooterClient.exe
+ShooterClient.exe

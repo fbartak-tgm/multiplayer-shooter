@@ -10,12 +10,12 @@ import java.util.List;
 public class ClientHandler implements Runnable {
     public static byte
             PLAYER = 0b01000000, // 64
-            DAMAGE   = 0b00100000, // 32
+            DAMAGE = 0b00100000, // 32
             BULLET = 0b00010000, // 16
             CREATE = 0b00001000, // 8
             DESTROY= 0b00000100, // 4
             UPDATE = 0b00000010, // 2
-            FIX_ISS= 0b00000001; // 1
+            SET    = 0b00000001; // 1
     public long x,y;
     public int size;
     Socket sock;
@@ -24,6 +24,7 @@ public class ClientHandler implements Runnable {
     public Server server;
     public boolean playerIsConnected = true;
     public long playerID;
+    public boolean shouldRun = true;
     public ClientHandler(Socket s,Server server)
     {
         this.server = server;
@@ -38,11 +39,12 @@ public class ClientHandler implements Runnable {
     }
     @Override
     public void run() {
-        while(true)
+        while(shouldRun)
         {
             try {
                 int in = inStream.read();
-                //System.out.println(in);
+//                if((in&BULLET)==0)
+                    System.out.println("Received command: " + in + " : " + Integer.toBinaryString(in));
                 if((in&PLAYER)!=0)
                 {
                     if((in&CREATE)!=0)
@@ -56,6 +58,10 @@ public class ClientHandler implements Runnable {
                     if((in&DAMAGE)!=0)
                     {
                         damagePlayer();
+                    }
+                    if((in&SET)!=0)
+                    {
+                        setHealth();
                     }
                     if((in&DESTROY)!=0)
                     {
@@ -126,7 +132,41 @@ public class ClientHandler implements Runnable {
         System.out.println("Creating player and broadcasting");
         server.broadcast(this,out);
     }
+    public void shutUpClient() throws IOException
+    {
+
+    }
     public void damagePlayer() throws IOException
+    {
+        byte[] pack = new byte[0];
+        try {
+            byte len = (byte) inStream.read();
+            pack = new byte[len];
+            int l = inStream.read(pack);
+
+            byte damage = pack[0];
+            long id = ByteUtil.readLongFromByteArray(pack, 1);
+            byte[] out = new byte[len + 2];
+            System.arraycopy(pack, 0, out, 2, len);
+            out[0] = (byte) (PLAYER | DAMAGE);
+            out[1] = len;
+            server.broadcast(this, out);
+            System.out.println(damage + " Damage to player: " + id);
+        }
+        catch (Exception e)
+        {
+            System.out.println("ERROR IN DAMAGE PACKET!!!");
+            System.out.println("Damage packet: \n-------------");
+            for(byte b : pack)
+            {
+                System.out.println((b&0xFF));
+            }
+            System.out.println("-------------");
+            System.err.println(e);
+            shouldRun = false;
+        }
+    }
+    public void setHealth() throws IOException
     {
         byte len = (byte)inStream.read();
         byte[] pack = new byte[len];
@@ -136,10 +176,10 @@ public class ClientHandler implements Runnable {
         long id = ByteUtil.readLongFromByteArray(pack,1);
         byte[] out = new byte[len+2];
         System.arraycopy(pack,0,out,2,len);
-        out[0] = (byte)(PLAYER | DAMAGE);
+        out[0] = (byte)(PLAYER | SET);
         out[1] = len;
         server.broadcast(this,out);
-        System.out.println(damage + " Damage to player: " + id);
+        System.out.println(damage + " is new health of player: " + id);
     }
     public void createBullet() throws IOException {
         byte len = (byte)inStream.read();
@@ -159,11 +199,11 @@ public class ClientHandler implements Runnable {
         out[0] = (byte)(BULLET | CREATE);
         out[1] = len;
         server.broadcast(this,out);
-        System.out.println("Created bullet and broadcasted: Id: \n " + id +
-                            " \nX:" + x +
-                            "\nY: " + y +
-                            "\nDX: " + dx +
-                            "\nDY: " + dy);
+//        System.out.println("Created bullet and broadcasted: Id: \n " + id +
+//                            " \nX:" + x +
+//                            "\nY: " + y +
+//                            "\nDX: " + dx +
+//                            "\nDY: " + dy);
     }
     public void destroyBullet() throws IOException {
         byte len = (byte)inStream.read();
@@ -176,7 +216,7 @@ public class ClientHandler implements Runnable {
         out[1] = len;
 //        System.out.println("Dest");
         server.broadcast(this,out);
-        System.out.println("Destroying bullet: " + id);
+//        System.out.println("Destroying bullet: " + id);
     }
     public void updatePlayer() throws IOException {
 //        System.out.println("Update player");
@@ -222,6 +262,7 @@ public class ClientHandler implements Runnable {
             outStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
+            shouldRun = false;
         }
     }
 }
