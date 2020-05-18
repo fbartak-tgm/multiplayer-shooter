@@ -14,7 +14,7 @@ OutputStream outStream;
 InputStream inStream;
 Syncer syncer;
 Thread t;
-
+public int score;
 void addPlayer(Player p)
 {
   players.add(p);
@@ -109,6 +109,7 @@ void setup()
   localPlayer = new Player(new PVector(30, 30), new PVector(0,0), (byte)20,System.currentTimeMillis());
   randomSeed(localPlayer.id);
   addPlayer(localPlayer);
+  println(players.toArray()[0]);
   try {
     s = new Socket(host, port);
     outStream = s.getOutputStream();
@@ -128,6 +129,17 @@ ArrayList<Player> playersThatWereHit;
 int bulletTTL = 15;
 void draw()
 {
+  //loadPixels();
+  //for (int i = 0; i < width; i++) {
+  //  for (int i = 0; i < height; i++) {
+  //// Pick a random number, 0 to 255
+  //    float rand = random(255);
+  //    // Create a grayscale color based on random number
+  //    color c = color(rand);
+  //    // Set pixel at that location to random color
+  //    pixels[i] = c;
+  //  }
+  //}
   if(localPlayer.hp <= 0)
   {
      localPlayer.pos = new PVector(0,0);
@@ -144,11 +156,11 @@ void draw()
       {
         if(mouseButton == LEFT)
         {
-          fireAgain = frameCount+regularCooldown;
+          fireAgain = frameCount+regularCooldown/2;
           Bullet b = new Bullet(
                           new PVector(localPlayer.pos.x,localPlayer.pos.y),
-                          new PVector(mouseX - width/2, mouseY - height/2).normalize().mult(10),
-                          (byte)5,(long)random(0,localPlayer.id),frameCount+bulletTTL);
+                          new PVector(mouseX - width/2, mouseY - height/2).normalize().mult(15),
+                          (byte)5,(long)random(0,localPlayer.id),frameCount+bulletTTL*2);
           sendCreateNewBullet(b);
           localBullets.add(b);
           allBullets.add(b);
@@ -157,7 +169,7 @@ void draw()
         {
           fireAgain = frameCount+shotgunCooldown;
           
-           for(int i = 0; i < 5; i++)
+           for(int i = 0; i < 10; i++)
            {
                Bullet b = new Bullet(
                           new PVector(localPlayer.pos.x,localPlayer.pos.y),
@@ -191,7 +203,7 @@ void draw()
       textAlign(CENTER);
       text(p.name,p.pos.x-localPlayer.pos.x+width/2, p.pos.y-localPlayer.pos.y+height/2-45);
       textAlign(LEFT);
-      text("player "+ p.name +"  at: X: " + p.pos.x + " Y: " + p.pos.y,10,10+i++*30);
+      text("player " + p.name +" SCORE: " + p.score + " at: X: " + p.pos.x + " Y: " + p.pos.y,10,10+i++*30);
       fill(127,127,127);
       p.update();
       for(Bullet b : localBullets)
@@ -205,7 +217,8 @@ void draw()
           if(p != localPlayer)
           {
             bulletsThatHit.add(b);
-            damagePlayer(p,(byte)10);
+            //if(p.hp > -10)
+              damagePlayer(p,(byte)10);
           }
         }
       }

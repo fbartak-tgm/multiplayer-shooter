@@ -43,25 +43,31 @@ public class ClientHandler implements Runnable {
         {
             try {
                 int in = inStream.read();
+                int length = inStream.read();
+                byte[] data = new byte[length];
+                int l = inStream.read(data);
 //                if((in&BULLET)==0)
-                    System.out.println("Received command: " + in + " : " + Integer.toBinaryString(in));
+                System.out.println("Received command: " + in + " : " + Integer.toBinaryString(in));
                 if((in&PLAYER)!=0)
                 {
                     if((in&CREATE)!=0)
                     {
-                        createPlayer();
+                        createPlayer(data);
                     }
-                    if((in&UPDATE)!=0)
-                    {
-                        updatePlayer();
+                    if((in&UPDATE)!=0) {
+                        if ((in & SET) != 0) {
+                            updatePlayerScore(data);
+                            continue;
+                        }
+                        updatePlayer(data);
                     }
                     if((in&DAMAGE)!=0)
                     {
-                        damagePlayer();
+                        damagePlayer(data);
                     }
                     if((in&SET)!=0)
                     {
-                        setHealth();
+                        setHealth(data);
                     }
                     if((in&DESTROY)!=0)
                     {
@@ -71,10 +77,10 @@ public class ClientHandler implements Runnable {
                 }
                 if((in&BULLET)!=0) {
                     if ((in & CREATE) != 0) {
-                        createBullet();
+                        createBullet(data);
                     }
                     if ((in & DESTROY) != 0) {
-                        destroyBullet();
+                        destroyBullet(data);
                     }
                 }
             } catch (IOException e) {
@@ -84,20 +90,11 @@ public class ClientHandler implements Runnable {
             }
         }
     }
-    public void createPlayer() throws IOException {
-        byte len = (byte)inStream.read();
-        byte[] pack = new byte[len];
-        int l = inStream.read(pack);
-        //System.out.println(l);
-        if(l!=pack.length)
-        {
-//            System.out.println("Strange packet length " + l + " vs " + pack.length);
-        }
+    public void createPlayer(byte[] pack) throws IOException {
+
         byte newPlayersSize = pack[0];
         long x = ByteUtil.readLongFromByteArray(pack,1);
         long y = ByteUtil.readLongFromByteArray(pack,9);
-//        System.out.println("Size: " + newPlayersSize + "\nX:" + x + "\nY:" + y);
-
         long ts = ByteUtil.readLongFromByteArray(pack,17);
         playerID = ts;
         System.out.println("Create player ran. Player ID: " + ts);
@@ -125,6 +122,7 @@ public class ClientHandler implements Runnable {
             }
         }
         playerID = ts;
+        byte len = (byte)pack.length;
         byte[] out = new byte[len+2];
         System.arraycopy(pack,0,out,2,len);
         out[0] = (byte)(PLAYER | CREATE);
@@ -132,25 +130,26 @@ public class ClientHandler implements Runnable {
         System.out.println("Creating player and broadcasting");
         server.broadcast(this,out);
     }
-    public void shutUpClient() throws IOException
+    void updatePlayerScore(byte[] pack) throws IOException
     {
-
+        byte len = (byte)pack.length;
+        long score = ByteUtil.readLongFromByteArray(pack,0);
+        long id = ByteUtil.readLongFromByteArray(pack,8);
+        byte[] out = new byte[len+2];
+        System.arraycopy(pack,0,out,2,len);
+        out[0] = (byte)(PLAYER | UPDATE | SET);
+        out[1] = len;
+        server.broadcast(this,out);
+        System.out.println(score + " is new score of player: " + id);
     }
-    public void damagePlayer() throws IOException
+    public void damagePlayer(byte[] pack) throws IOException
     {
-        byte[] pack = new byte[0];
         try {
-            byte len = (byte) inStream.read();
-            pack = new byte[len];
-            int l = inStream.read(pack);
+            byte len = (byte) pack.length;
 
             byte damage = pack[0];
-            long id = ByteUtil.readLongFromByteArray(pack, 1);
-            byte[] out = new byte[len + 2];
-            System.arraycopy(pack, 0, out, 2, len);
-            out[0] = (byte) (PLAYER | DAMAGE);
-            out[1] = len;
-            server.broadcast(this, out);
+            long id = ByteUtil.readLongFromByteArray(pack,1);
+            buildShortPlayerPackage(len, pack, DAMAGE);
             System.out.println(damage + " Damage to player: " + id);
         }
         catch (Exception e)
@@ -166,27 +165,26 @@ public class ClientHandler implements Runnable {
             shouldRun = false;
         }
     }
-    public void setHealth() throws IOException
+    public void setHealth(byte[] pack) throws IOException
     {
-        byte len = (byte)inStream.read();
-        byte[] pack = new byte[len];
-        int l = inStream.read(pack);
+        byte len = (byte)pack.length;
 
-        byte damage = pack[0];
-        long id = ByteUtil.readLongFromByteArray(pack,1);
+        byte health = pack[0];
+        long value = ByteUtil.readLongFromByteArray(pack,1);
+        buildShortPlayerPackage(len, pack, SET);
+        System.out.println(health + " is new health of player: " + value);
+    }
+
+    private void buildShortPlayerPackage(byte len, byte[] pack, byte thingToSet) {
         byte[] out = new byte[len+2];
         System.arraycopy(pack,0,out,2,len);
-        out[0] = (byte)(PLAYER | SET);
+        out[0] = (byte)(PLAYER | thingToSet);
         out[1] = len;
         server.broadcast(this,out);
-        System.out.println(damage + " is new health of player: " + id);
     }
-    public void createBullet() throws IOException {
-        byte len = (byte)inStream.read();
-        byte[] pack = new byte[len];
-        int l = inStream.read(pack);
-        //System.out.println(l);
 
+    public void createBullet(byte[] pack) throws IOException {
+        byte len = (byte)pack.length;
         byte newBulletsSize = pack[0];
         long dx = pack[1];
         long dy = pack[2];
@@ -199,49 +197,27 @@ public class ClientHandler implements Runnable {
         out[0] = (byte)(BULLET | CREATE);
         out[1] = len;
         server.broadcast(this,out);
-//        System.out.println("Created bullet and broadcasted: Id: \n " + id +
-//                            " \nX:" + x +
-//                            "\nY: " + y +
-//                            "\nDX: " + dx +
-//                            "\nDY: " + dy);
     }
-    public void destroyBullet() throws IOException {
-        byte len = (byte)inStream.read();
-        byte[] pack = new byte[len];
-        int l = inStream.read(pack);
+    public void destroyBullet(byte[] pack) throws IOException {
+        byte len = (byte)pack.length;
         long id = ByteUtil.readLongFromByteArray(pack,0);
         byte[] out = new byte[len+2];
         System.arraycopy(pack,0,out,2,len);
         out[0] = (byte)(BULLET | DESTROY);
         out[1] = len;
-//        System.out.println("Dest");
         server.broadcast(this,out);
-//        System.out.println("Destroying bullet: " + id);
     }
-    public void updatePlayer() throws IOException {
-//        System.out.println("Update player");
-        byte len = (byte)inStream.read();
-        byte[] pack = new byte[len];
-        int l = inStream.read(pack);
-        if(l!=pack.length)
-        {
-//            System.out.println("Strange packet length " + l + " vs " + pack.length);
-        }
+    public void updatePlayer(byte[] pack) throws IOException {
+        byte len = (byte)pack.length;
         byte newPlayersSize = pack[0];
         long x = pack[1];
         long y = pack[2];
 
         long activeId = ByteUtil.readLongFromByteArray(pack,3);
-//        playerID = ts;
         byte[] out = new byte[len+2];
         System.arraycopy(pack,0,out,2,len);
         out[0] = (byte)(PLAYER | UPDATE);
         out[1] = len;
-        //System.out.println("Bytes:");
-//        for (byte b : out) {
-//            System.out.println(b&0xFF);
-//        }
-        //System.out.println("----------");
         System.out.println("X Vel: " + x + " Y Vel: " + y + " Size: " + newPlayersSize + " Player ID: " + activeId);
         server.broadcast(this,out);
     }

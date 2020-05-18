@@ -111,10 +111,33 @@ void sendRemoveBullet(Bullet b)
     println(e);
   }
 }
-
+void sendPlayerScoreUpdate(Player p, long score)
+{
+  try {
+    byte s = 20;
+    byte[] pack = new byte[s];
+    pack[0] = (byte)(PLAYER | UPDATE | SET);
+    pack[1] = (byte)(s-2);
+    
+    pushLongIntoByteArray(score,pack,2);
+    pushLongIntoByteArray(p.id,pack,10);
+    outStream.write(pack);
+  }
+  catch(Exception e)
+  {  
+    println(e);
+  }
+}
 void damagePlayer(Player p,byte amount)
 {
+  //if(p.hp <= 0)
+  //  return;
   p.hp -= amount;
+  if(p.hp <= 0)
+  {
+    sendPlayerScoreUpdate(localPlayer,++localPlayer.score); 
+  }
+  
   println("DAMAGE!!!!");
   try {
     byte s = 11;
@@ -134,6 +157,27 @@ void damagePlayer(Player p,byte amount)
   catch(Exception e)
   {  
     println(e);
+  }
+  Object[] playerArrayObj = players.toArray();
+  Player[] playerArray = new Player[playerArrayObj.length];
+  for(int i = 0; i < playerArrayObj.length; i++)
+  {
+    playerArray[i] = (Player)playerArrayObj[i];  
+  }
+  for(int i = 0; i < playerArray.length-1; i++)
+  {
+    println(playerArray[i]);
+    if(playerArray[i].score < playerArray[i+1].score)
+    {
+      Player temp = playerArray[i+1];
+      playerArray[i+1] = playerArray[i];
+      playerArray[i] = temp;
+    }
+  }
+  players = new ConcurrentLinkedQueue<Player>();
+  for(Player player : playerArray)
+  {
+    players.add(player);
   }
 }
 void setPlayerHealth(Player p,byte amount)

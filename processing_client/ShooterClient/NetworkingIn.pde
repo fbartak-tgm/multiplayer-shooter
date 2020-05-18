@@ -22,7 +22,50 @@ public void receivePlayerUpdate() throws IOException {
     }
   }
 }
+void receivePlayerScoreUpdate() throws IOException
+{
+  int len = inStream.read();
+  byte[] pack = new byte[len];
+  int l = inStream.read(pack);
+  println(l + " bytes read");
+  if(l!=pack.length)
+  {
+        System.out.println("Strange packet length " + l + " vs " + pack.length);
+  }
+  long newScore = readLongFromByteArray(pack,0);
 
+  long activeId = readLongFromByteArray(pack,8);
+
+  for(Player player : players)
+  {
+    if(player.id == activeId)
+    {
+       player.score = newScore;
+       break; 
+    }
+  }
+  Object[] playerArrayObj = players.toArray();
+  Player[] playerArray = new Player[playerArrayObj.length];
+  for(int i = 0; i < playerArrayObj.length; i++)
+  {
+    playerArray[i] = (Player)playerArrayObj[i];  
+  }
+  for(int i = 0; i < playerArray.length-1; i++)
+  {
+    println(playerArray[i]);
+    if(playerArray[i].score < playerArray[i+1].score)
+    {
+      Player temp = playerArray[i+1];
+      playerArray[i+1] = playerArray[i];
+      playerArray[i] = temp;
+    }
+  }
+  players = new ConcurrentLinkedQueue<Player>();
+  for(Player p : playerArray)
+  {
+    players.add(p);
+  }
+}
 public void createPlayer() throws IOException {
   int len = inStream.read();
   byte[] pack = new byte[len];

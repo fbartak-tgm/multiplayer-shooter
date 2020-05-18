@@ -5,6 +5,7 @@ class Player
   long id;
   String name;
   int hp = 100;
+  long score = 0;
   public Player(PVector pos,PVector velocity,byte size,long id)
   {
     this.pos = pos; 

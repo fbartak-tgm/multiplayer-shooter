@@ -24,9 +24,20 @@ public class Syncer implements Runnable
                   println("Creating player");
                   continue;
               }
+              if((in&SET)!=0)
+              {
+                  if((in&UPDATE)!=0)
+                  {
+                    println("Score update!");
+                    receivePlayerScoreUpdate();
+                    continue;
+                  }
+                  receiveSetHealth();
+                  continue;
+              }
               if((in&UPDATE)!=0)
               {
-                  receivePlayerUpdate();
+                  receivePlayerUpdate(); // HEALTH UPDATE
                   continue;
               }
               if((in&DAMAGE)!=0)
@@ -39,11 +50,7 @@ public class Syncer implements Runnable
                   receiveRemovePlayer();
                   continue;
               }
-               if((in&SET)!=0)
-              {
-                  receiveSetHealth();
-                  continue;
-              }
+               
           }
           if((in&BULLET)!=0)
           {
